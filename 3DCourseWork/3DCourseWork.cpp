@@ -16,12 +16,16 @@
 HINSTANCE hInst;                                // текущий экземпляр
 WCHAR szTitle[MAX_LOADSTRING];                  // Текст строки заголовка
 WCHAR szWindowClass[MAX_LOADSTRING];            // имя класса главного окна
+
 HDC g_hDC = nullptr;                            //контекст устройства
 HGLRC g_hRC = nullptr;                          //контекст OpenGL
 HWND g_hWnd = nullptr;                          //главное окно
 
 int g_width = 600;
 int g_height = 800;
+float g_rotateX = 0.0f;
+float g_rotateY = 0.0f;
+float g_rotateZ = 0.0f;
 
 
 
@@ -169,6 +173,36 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
         }
         break;
+
+    case WM_KEYDOWN:
+    {
+        switch (wParam)
+        {
+        case 'X':
+            g_rotateX += 5.0f;
+            break;
+
+        case 'Y':
+            g_rotateY += 5.0f;
+            break;
+
+        case 'Z':
+            g_rotateZ += 5.0f;
+            break;
+
+        case 'R':
+            g_rotateX = 0.0f;
+            g_rotateY = 0.0f;
+            g_rotateZ = 0.0f;
+            break;
+
+        case VK_ESCAPE:
+            DestroyWindow(hWnd);
+            break;
+        }
+        InvalidateRect(hWnd, nullptr, FALSE);
+    }
+    break;
 
     case WM_SIZE:
         {
@@ -322,10 +356,14 @@ void RenderScene()
     glLoadIdentity();
 
     gluLookAt(
-        0.0, -5.0, 3.0,
+        4.0, -6.0, 4.0,
         0.0, 0.0, 0.0,
         0.0, 0.0, 1.0
     );
+
+    glRotatef(g_rotateX, 1.0f, 0.0f, 0.0f);
+    glRotatef(g_rotateY, 0.0f, 1.0f, 0.0f);
+    glRotatef(g_rotateZ, 0.0f, 0.0f, 1.0f);
 
     DrawAxes();
 
