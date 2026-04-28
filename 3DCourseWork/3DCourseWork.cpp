@@ -6,6 +6,9 @@
 #include <windows.h>
 #include <gl/GL.h>
 #include <gl/GLU.h>
+#include <vector>
+#include <string>
+#include <cmath>
 
 #pragma comment(lib, "opengl32.lib")
 #pragma comment(lib, "glu32.lib")
@@ -37,6 +40,8 @@ int g_lastMouseY = 0;
 
 
 
+
+
 // Отправить объявления функций, включенных в этот модуль кода:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
@@ -47,6 +52,88 @@ void CleanupOpenGL();
 void ResizeOpenGL(int width, int height);
 void RenderScene();
 void DrawAxes();
+
+//структуры для хранения OBJ моделей
+struct Vec3
+{
+    float x;
+    float y;
+    float z;
+
+    Vec3()
+    {
+        x = 0.0f;
+        y = 0.0f;
+        z = 0.0f;
+    }
+
+    Vec3(float x, float y, float z)
+    {
+        x = x;
+        y = y;
+        z = z;
+    }
+};
+
+static Vec3 operator-(const Vec3& a, const Vec3& b)
+{
+    return Vec3(
+        a.x - b.x,
+        a.y - b.y,
+        a.z - b.z
+    );
+}
+
+static Vec3 Cross(const Vec3& a, const Vec3& b)
+{
+    return Vec3(
+        a.y * b.z - a.z * b.y,
+        a.z * b.x - a.x * b.z,
+        a.x * b.y - a.y * b.x
+    );
+}
+
+static Vec3 Normalize(const Vec3& v)
+{
+    float length = sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
+
+    if (length < 0.000001f)
+    {
+        return Vec3(0.0f, 0.0f, 1.0f);
+    }
+
+    return Vec3(
+        v.x / length,
+        v.y / length,
+        v.z / length
+    );
+}
+
+struct Vertex
+{
+    Vec3 position;
+    Vec3 normal;
+};
+
+struct ObjModel
+{
+    std::string name;
+    std::vector<Vertex> vectices;
+    bool loaded;
+
+    ObjModel()
+    {
+        loaded = false;
+    }
+};
+
+ObjModel g_body;
+ObjModel g_leftUpperArm;
+ObjModel g_leftForearm;
+ObjModel g_leftHand;
+ObjModel g_rightUpperArm;
+ObjModel g_rightForearm;
+ObjModel g_rightHand;
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
