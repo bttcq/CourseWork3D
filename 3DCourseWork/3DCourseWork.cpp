@@ -53,6 +53,15 @@ void ResizeOpenGL(int width, int height);
 void RenderScene();
 void DrawAxes();
 
+static bool FileExistsA(const std::string& path);
+static std::string GetCurrentDirectoryStringA();
+static std::string DirectoryOfA(const std::string& fullPath);
+static std::string GetExeDirectoryA();
+static std::string JoinPathA(const std::string& a, const std::string& b);
+static std::string FindModelPath(const std::string& localPath);
+
+
+
 //структуры для хранения OBJ моделей
 struct Vec3
 {
@@ -67,11 +76,11 @@ struct Vec3
         z = 0.0f;
     }
 
-    Vec3(float x, float y, float z)
+    Vec3(float X, float Y, float Z)
     {
-        x = x;
-        y = y;
-        z = z;
+        x = X;
+        y = Y;
+        z = Z;
     }
 };
 
@@ -118,7 +127,7 @@ struct Vertex
 struct ObjModel
 {
     std::string name;
-    std::vector<Vertex> vectices;
+    std::vector<Vertex> vertices;
     bool loaded;
 
     ObjModel()
@@ -134,6 +143,103 @@ ObjModel g_leftHand;
 ObjModel g_rightUpperArm;
 ObjModel g_rightForearm;
 ObjModel g_rightHand;
+
+static bool FileExistsA(const std::string& path)
+{
+    DWORD attr = GetFileAttributesA(path.c_str());
+
+    return attr != INVALID_FILE_ATTRIBUTES &&
+        !(attr & FILE_ATTRIBUTE_DIRECTORY);
+}
+
+static std::string GetCurrentDirectoryStringA()
+{
+    char buffer[MAX_PATH];
+
+    DWORD length = GetCurrentDirectoryA(MAX_PATH, buffer);
+
+    if (length == 0 || length >= MAX_PATH)
+    {
+        return ".";
+    }
+
+    return std::string(buffer);
+}
+
+static std::string DirectoryOfA(const std::string& fullPath)
+{
+    size_t position = fullPath.find_last_of("\\/");
+
+    if (position == std::string::npos)
+    {
+        return ".";
+    }
+
+    return fullPath.substr(0, position);
+}
+
+static std::string GetExeDirectoryA()
+{
+    char buffer[MAX_PATH];
+
+    DWORD length = GetModuleFileNameA(nullptr, buffer, MAX_PATH);
+
+    if (length == 0 || length >= MAX_PATH)
+    {
+        return ".";
+    }
+
+    return DirectoryOfA(std::string(buffer));
+}
+
+static std::string JoinPathA(const std::string& a, const std::string& b)
+{
+    if (a.empty())
+    {
+        return b;
+    }
+
+    char last = a[a.size() - 1];
+
+    if (last == '\\' || last == '/')
+    {
+        return a + b;
+    }
+
+    return a + "\\" + b;
+}
+
+static std::string FindModelPath(const std::string& localPath)
+{
+    std::string currentDir = GetCurrentDirectoryStringA();
+    std::string exeDir = GetExeDirectoryA();
+
+    std::vector<std::string> candidates;
+
+    candidates.push_back(localPath);
+    candidates.push_back(JoinPathA(currentDir, localPath));
+    candidates.push_back(JoinPathA(exeDir, localPath));
+
+    candidates.push_back(JoinPathA(currentDir, "x64\\Debug\\" + localPath));
+    candidates.push_back(JoinPathA(currentDir, "Debug\\" + localPath));
+    candidates.push_back(JoinPathA(currentDir, "x64\\Release\\" + localPath));
+    candidates.push_back(JoinPathA(currentDir, "Release\\" + localPath));
+
+    candidates.push_back(JoinPathA(exeDir, "..\\" + localPath));
+    candidates.push_back(JoinPathA(exeDir, "..\\..\\" + localPath));
+    candidates.push_back(JoinPathA(currentDir, "..\\" + localPath));
+    candidates.push_back(JoinPathA(currentDir, "..\\..\\" + localPath));
+
+    for (size_t i = 0; i < candidates.size(); i++)
+    {
+        if (FileExistsA(candidates[i]))
+        {
+            return candidates[i];
+        }
+    }
+
+    return "";
+}
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -465,7 +571,20 @@ bool InitOpenGL(HWND hWnd)
 
     ResizeOpenGL(g_width, g_height);
 
+    std::string testPath = FindModelPath("models\\robot_body_static.obj");
+
+    if (testPath.empty())
+    {
+        MessageBoxA(hWnd, "Model file not found", "OBJ check", MB_OK | MB_ICONWARNING);
+    }
+    else
+    {
+        MessageBoxA(hWnd, testPath.c_str(), "OBJ file found", MB_OK | MB_ICONINFORMATION);
+    }
+
     return true;
+
+    
 }
 
 void CleanupOpenGL()
