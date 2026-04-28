@@ -35,6 +35,7 @@ bool InitOpenGL(HWND hWnd);
 void CleanupOpenGL();
 void ResizeOpenGL(int width, int height);
 void RenderScene();
+void DrawAxes();
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -326,5 +327,29 @@ void RenderScene()
         0.0, 0.0, 1.0
     );
 
+    DrawAxes();
+
     SwapBuffers(g_hDC);
+}
+
+void DrawAxes()
+{
+    glLineWidth(3.0f);
+
+    glBegin(GL_LINES);
+
+    glColor3f(1.0f, 0.0f, 0.0f);
+    glVertex3f(-2.0f, 0.0f, 0.0f);
+    glVertex3f(2.0f, 0.0f, 0.0f);
+
+    glColor3f(0.0f, 1.0f, 0.0f);
+    glVertex3f(0.0f, -2.0f, 0.0f);
+    glVertex3f(0.0f, 2.0f, 0.0f);
+
+    glColor3f(0.0f, 0.3f, 1.0f);
+    glVertex3f(0.0f, 0.0f, -2.0f);
+    glVertex3f(0.0f, 0.0f, 2.0f);
+
+    glEnd();
+    glLineWidth(1.0f);
 }
