@@ -23,9 +23,16 @@ HWND g_hWnd = nullptr;                          //главное окно
 
 int g_width = 600;
 int g_height = 800;
+
 float g_rotateX = 0.0f;
 float g_rotateY = 0.0f;
 float g_rotateZ = 0.0f;
+
+float g_distance = 7.0f;
+
+bool g_mouseLeftDown = false;
+int g_lastMouseX = 0;
+int g_lastMouseY = 0;
 
 
 
@@ -194,12 +201,79 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             g_rotateX = 0.0f;
             g_rotateY = 0.0f;
             g_rotateZ = 0.0f;
+            g_distance = 7.0f;
             break;
 
         case VK_ESCAPE:
             DestroyWindow(hWnd);
             break;
         }
+        InvalidateRect(hWnd, nullptr, FALSE);
+    }
+    break;
+
+    case WM_LBUTTONDOWN:
+        {
+            g_mouseLeftDown = true;
+
+            g_lastMouseX = LOWORD(lParam);
+            g_lastMouseY = HIWORD(lParam);
+
+            SetCapture(hWnd);
+        }
+        break;
+
+    case WM_LBUTTONUP:
+        {
+            g_mouseLeftDown = false;
+            ReleaseCapture();
+        }
+        break;
+
+    case WM_MOUSEMOVE:
+    {
+        if (g_mouseLeftDown)
+        {
+            int x = LOWORD(lParam);
+            int y = HIWORD(lParam);
+
+            int dx = x - g_lastMouseX;
+            int dy = y - g_lastMouseY;
+
+            g_rotateZ += dx * 0.5f;
+            g_rotateX += dy * 0.5f;
+
+            g_lastMouseX = x;
+            g_lastMouseY = y;
+
+            InvalidateRect(hWnd, nullptr, FALSE);
+        }
+    }
+    break;
+
+    case WM_MOUSEWHEEL:
+    {
+        int delta = GET_WHEEL_DELTA_WPARAM(wParam);
+
+        if (delta > 0)
+        {
+            g_distance -= 0.5f;
+        }
+        else
+        {
+            g_distance += 0.5f;
+        }
+
+        if (g_distance < 2.0f)
+        {
+            g_distance = 2.0f;
+        }
+
+        if (g_distance > 20.0f)
+        {
+            g_distance = 20.0f;
+        }
+
         InvalidateRect(hWnd, nullptr, FALSE);
     }
     break;
@@ -356,7 +430,7 @@ void RenderScene()
     glLoadIdentity();
 
     gluLookAt(
-        4.0, -6.0, 4.0,
+        4.0, -g_distance, 4.0,
         0.0, 0.0, 0.0,
         0.0, 0.0, 1.0
     );
