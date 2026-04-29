@@ -9,6 +9,9 @@
 #include <vector>
 #include <string>
 #include <cmath>
+#include <fstream>
+#include <sstream>
+#include <cstdlib>
 
 #pragma comment(lib, "opengl32.lib")
 #pragma comment(lib, "glu32.lib")
@@ -136,6 +139,9 @@ struct ObjModel
     }
 };
 
+static int ParseObjIndex(const std::string& token);
+static bool LoadObjModel(const std::string& localPath, ObjModel& model);
+
 ObjModel g_body;
 ObjModel g_leftUpperArm;
 ObjModel g_leftForearm;
@@ -239,6 +245,123 @@ static std::string FindModelPath(const std::string& localPath)
     }
 
     return "";
+}
+
+static int ParseObjIndex(const std::string& token)
+{
+    size_t slashPos = token.find('/');
+
+    std::string numberPart;
+
+    if (slashPos == std::string::npos)
+    {
+        numberPart = token;
+    }
+    else
+    {
+        numberPart = token.substr(0, slashPos);
+    }
+
+    return std::atoi(numberPart.c_str());
+}
+
+static bool LoadObjModel(const std::string& localPath, ObjModel& model)
+{
+    std::string path = FindModelPath(localPath);
+
+    if (path.empty())
+    {
+        model.loaded = false;
+        return false;
+    }
+
+    std::ifstream file(path);
+
+    if (!file.is_open())
+    {
+        model.loaded = false;
+        return false;
+    }
+
+    model.name = localPath;
+    model.vertices.clear();
+    model.loaded = false; \
+
+    std::vector<Vec3> positions;
+    std::string line;
+
+    while (std::getline(file, line))
+    {
+        if (line.size() < 3)
+        {
+            continue;
+        }
+
+        if (line[0] == 'v' && line[1] == ' ')
+        {
+            std::stringstream ss(line);
+
+            char prefix;
+            float x;
+            float y;
+            float z;
+            ss >> prefix >> x >> y >> z;
+
+            positions.push_back(Vec3(x, y, z));
+        }
+        else if (line[0] == 'f' && line[1] == ' ')
+        {
+            std::stringstream ss(line);
+
+            char prefix;
+            ss >> prefix;
+
+            std::vector<int> faceIndices;
+            std::string token;
+
+            while (ss >> token)
+            {
+                int index = ParseObjIndex(token);
+
+                if (index > 0 && index <= (int)positions.size())
+                {
+                    faceIndices.push_back(index - 1);
+                }
+            }
+
+            if (faceIndices.size() >= 3)
+            {
+                for (size_t i = 1; i + 1 < faceIndices.size(); i++)
+                {
+                    Vec3 p1 = positions[faceIndices[0]];
+                    Vec3 p2 = positions[faceIndices[i]];
+                    Vec3 p3 = positions[faceIndices[i + 1]];
+
+                    Vec3 normal = Normalize(Cross(p2 - p1, p3 - p1));
+
+                    Vertex v1;
+                    v1.position = p1;
+                    v1.normal = normal;
+
+                    Vertex v2;
+                    v2.position = p2;
+                    v2.normal = normal;
+
+                    Vertex v3;
+                    v3.position = p3;
+                    v3.normal = normal;
+
+                    model.vertices.push_back(v1);
+                    model.vertices.push_back(v2);
+                    model.vertices.push_back(v3);
+                }
+            }
+        }
+    }
+
+    model.loaded = !model.vertices.empty();
+
+    return model.loaded;
 }
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
@@ -570,21 +693,12 @@ bool InitOpenGL(HWND hWnd)
     glClearColor(0.05f, 0.05f, 0.08f, 1.0f);
 
     ResizeOpenGL(g_width, g_height);
-
-    std::string testPath = FindModelPath("models\\robot_body_static.obj");
-
-    if (testPath.empty())
+    if (!LoadObjModel("models\\robot_body_static.obj", g_body))
     {
-        MessageBoxA(hWnd, "Model file not found", "OBJ check", MB_OK | MB_ICONWARNING);
-    }
-    else
-    {
-        MessageBoxA(hWnd, testPath.c_str(), "OBJ file found", MB_OK | MB_ICONINFORMATION);
+        MessageBoxA(hWnd, "Body model not loaded", "OBJ load", MB_OK | MB_ICONWARNING);
     }
 
     return true;
-
-    
 }
 
 void CleanupOpenGL()
