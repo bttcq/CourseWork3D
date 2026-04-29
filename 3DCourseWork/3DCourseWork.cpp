@@ -139,6 +139,8 @@ struct ObjModel
     }
 };
 
+void DrawObjModel(const ObjModel& model);
+
 static int ParseObjIndex(const std::string& token);
 static bool LoadObjModel(const std::string& localPath, ObjModel& model);
 
@@ -285,7 +287,7 @@ static bool LoadObjModel(const std::string& localPath, ObjModel& model)
 
     model.name = localPath;
     model.vertices.clear();
-    model.loaded = false; \
+    model.loaded = false; 
 
     std::vector<Vec3> positions;
     std::string line;
@@ -761,6 +763,9 @@ void RenderScene()
 
     DrawAxes();
 
+    glColor3f(0.8f, 0.8f, 0.8f);
+    DrawObjModel(g_body);
+
     SwapBuffers(g_hDC);
 }
 
@@ -784,4 +789,23 @@ void DrawAxes()
 
     glEnd();
     glLineWidth(1.0f);
+}
+
+void DrawObjModel(const ObjModel& model)
+{
+    if (!model.loaded)
+    {
+        return;
+    }
+
+    glBegin(GL_TRIANGLES);
+
+    for (size_t i = 0; i < model.vertices.size(); i++)
+    {
+        const Vertex& v = model.vertices[i];
+
+        glNormal3f(v.normal.x, v.normal.y, v.normal.z);
+        glVertex3f(v.position.x, v.position.y, v.position.z);
+    }
+    glEnd();
 }
