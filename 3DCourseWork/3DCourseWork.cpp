@@ -75,6 +75,8 @@ void ResizeOpenGL(int width, int height);
 void RenderScene();
 void DrawAxes();
 void UpdateAnimation();
+void InitLighting();
+void SetupLight();
 
 static bool FileExistsA(const std::string& path);
 static std::string GetCurrentDirectoryStringA();
@@ -738,6 +740,8 @@ bool InitOpenGL(HWND hWnd)
 
     glEnable(GL_DEPTH_TEST);
 
+    InitLighting();
+
     glClearColor(0.05f, 0.05f, 0.08f, 1.0f);
 
     ResizeOpenGL(g_width, g_height);
@@ -816,6 +820,35 @@ void ResizeOpenGL(int width, int height)
     glLoadIdentity();
 }
 
+void InitLighting()
+{
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+
+    glEnable(GL_COLOR_MATERIAL);
+    glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+
+    glEnable(GL_NORMALIZE);
+
+    GLfloat ambientLight[] = { 0.25f, 0.25f, 0.25f, 1.0f };
+    GLfloat diffuseLight[] = { 0.85f, 0.85f, 0.85f, 1.0f };
+    GLfloat specularLight[] = { 0.35f, 0.35f, 0.35f, 1.0f };
+
+    glLightfv(GL_LIGHT0, GL_AMBIENT, ambientLight);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuseLight);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, specularLight);
+
+    GLfloat materialSpecular[] = { 0.35f, 0.35f, 0.35f, 1.0f };
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, materialSpecular);
+    glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 32.0f);
+}
+
+void SetupLight()
+{
+    GLfloat lightPosition[] = { 4.0f, -5.0f, 7.0f, 1.0f };
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
+}
+
 void RenderScene()
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -827,6 +860,8 @@ void RenderScene()
         0.0, 0.0, 0.0,
         0.0, 0.0, 1.0
     );
+
+    SetupLight();
 
     glRotatef(g_rotateX, 1.0f, 0.0f, 0.0f);
     glRotatef(g_rotateY, 0.0f, 1.0f, 0.0f);
@@ -883,6 +918,8 @@ void UpdateAnimation()
 
 void DrawAxes()
 {
+    glDisable(GL_LIGHTING);
+
     glLineWidth(3.0f);
 
     glBegin(GL_LINES);
@@ -900,7 +937,10 @@ void DrawAxes()
     glVertex3f(0.0f, 0.0f, 2.0f);
 
     glEnd();
+
     glLineWidth(1.0f);
+
+    glEnable(GL_LIGHTING);
 }
 
 void DrawObjModel(const ObjModel& model)
@@ -924,11 +964,11 @@ void DrawObjModel(const ObjModel& model)
 
 void DrawRobot()
 {
-    // Корпус робота — серый
+    
     glColor3f(0.75f, 0.78f, 0.82f);
     DrawObjModel(g_body);
 
-    // Левая рука — светло-голубая
+   
     glPushMatrix();
 
     glColor3f(0.45f, 0.75f, 1.0f);
@@ -956,7 +996,7 @@ void DrawRobot()
 
     glPopMatrix();
 
-    // Правая рука — пастельно-оранжевая
+    
     glPushMatrix();
 
     glColor3f(1.0f, 0.62f, 0.35f);
