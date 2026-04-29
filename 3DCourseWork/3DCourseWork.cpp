@@ -140,6 +140,7 @@ struct ObjModel
 };
 
 void DrawObjModel(const ObjModel& model);
+void DrawRobot();
 
 static int ParseObjIndex(const std::string& token);
 static bool LoadObjModel(const std::string& localPath, ObjModel& model);
@@ -695,9 +696,26 @@ bool InitOpenGL(HWND hWnd)
     glClearColor(0.05f, 0.05f, 0.08f, 1.0f);
 
     ResizeOpenGL(g_width, g_height);
-    if (!LoadObjModel("models\\robot_body_static.obj", g_body))
+    
+    bool modelsLoaded = true;
+
+    modelsLoaded &= LoadObjModel("models\\robot_body_static.obj", g_body);
+    modelsLoaded &= LoadObjModel("models\\left_upper_arm.obj", g_leftUpperArm);
+    modelsLoaded &= LoadObjModel("models\\left_forearm.obj", g_leftForearm);
+    modelsLoaded &= LoadObjModel("models\\left_hand.obj", g_leftHand);
+
+    modelsLoaded &= LoadObjModel("models\\right_upper_arm.obj", g_rightUpperArm);
+    modelsLoaded &= LoadObjModel("models\\right_forearm.obj", g_rightForearm);
+    modelsLoaded &= LoadObjModel("models\\right_hand.obj", g_rightHand);
+
+    if (!modelsLoaded)
     {
-        MessageBoxA(hWnd, "Body model not loaded", "OBJ load", MB_OK | MB_ICONWARNING);
+        MessageBoxA(
+            hWnd,
+            "Не все OBJ-модели были загружены. Проверь папку models и названия файлов.",
+            "OBJ load",
+            MB_OK | MB_ICONWARNING
+        );
     }
 
     return true;
@@ -763,8 +781,7 @@ void RenderScene()
 
     DrawAxes();
 
-    glColor3f(0.8f, 0.8f, 0.8f);
-    DrawObjModel(g_body);
+    DrawRobot();
 
     SwapBuffers(g_hDC);
 }
@@ -808,4 +825,49 @@ void DrawObjModel(const ObjModel& model)
         glVertex3f(v.position.x, v.position.y, v.position.z);
     }
     glEnd();
+}
+
+void DrawRobot()
+{
+
+    glColor3f(0.75f, 0.78f, 0.82f);
+    DrawObjModel(g_body);
+
+    glPushMatrix();
+
+    glTranslatef(0.0f, -0.98f, 3.35f);
+
+    glColor3f(0.55f, 0.65f, 0.95f);
+    DrawObjModel(g_leftUpperArm);
+
+    glTranslatef(0.0f, 0.0f, -1.30f);
+
+    glColor3f(0.45f, 0.55f, 0.85f);
+    DrawObjModel(g_leftForearm);
+
+    glTranslatef(0.0f, 0.0f, -1.10f);
+
+    glColor3f(0.85f, 0.85f, 0.95f);
+    DrawObjModel(g_leftHand);
+
+    glPopMatrix();
+
+    glPushMatrix();
+
+    glTranslatef(0.0f, 0.98f, 3.35f);
+
+    glColor3f(0.95f, 0.60f, 0.50f);
+    DrawObjModel(g_rightUpperArm);
+
+    glTranslatef(0.0f, 0.0f, -1.30f);
+
+    glColor3f(0.85f, 0.50f, 0.40f);
+    DrawObjModel(g_rightForearm);
+
+    glTranslatef(0.0f, 0.0f, -1.10f);
+
+    glColor3f(0.95f, 0.85f, 0.80f);
+    DrawObjModel(g_rightHand);
+
+    glPopMatrix();
 }
