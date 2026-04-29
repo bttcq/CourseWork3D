@@ -40,6 +40,25 @@ bool g_mouseLeftDown = false;
 int g_lastMouseX = 0;
 int g_lastMouseY = 0;
 
+bool g_armAnimation = false;
+
+float g_animTime = 0.0f;
+DWORD g_lastTime = 0;
+
+float g_leftShoulderX = 0.0f;
+float g_leftShoulderY = 0.0f;
+float g_leftShoulderZ = 0.0f;
+float g_leftElbowY = 0.0f;
+float g_leftWristX = 0.0f;
+float g_leftWristZ = 0.0f;
+
+float g_rightShoulderX = 0.0f;
+float g_rightShoulderY = 0.0f;
+float g_rightShoulderZ = 0.0f;
+float g_rightElbowY = 0.0f;
+float g_rightWristX = 0.0f;
+float g_rightWristZ = 0.0f;
+
 
 
 
@@ -55,6 +74,7 @@ void CleanupOpenGL();
 void ResizeOpenGL(int width, int height);
 void RenderScene();
 void DrawAxes();
+void UpdateAnimation();
 
 static bool FileExistsA(const std::string& path);
 static std::string GetCurrentDirectoryStringA();
@@ -500,6 +520,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         break;
 
+    case WM_TIMER:
+    {
+        UpdateAnimation();
+        InvalidateRect(hWnd, nullptr, FALSE);
+    }
+    break;
+
     case WM_KEYDOWN:
     {
         switch (wParam)
@@ -516,11 +543,29 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             g_rotateZ += 5.0f;
             break;
 
+        case 'M':
+            g_armAnimation = !g_armAnimation;
+            break;
+
         case 'R':
             g_rotateX = 0.0f;
             g_rotateY = 0.0f;
             g_rotateZ = 0.0f;
             g_distance = 7.0f;
+
+            g_leftShoulderX = 0.0f;
+            g_leftShoulderY = 0.0f;
+            g_leftShoulderZ = 0.0f;
+            g_leftElbowY = 0.0f;
+            g_leftWristX = 0.0f;
+            g_leftWristZ = 0.0f;
+
+            g_rightShoulderX = 0.0f;
+            g_rightShoulderY = 0.0f;
+            g_rightShoulderZ = 0.0f;
+            g_rightElbowY = 0.0f;
+            g_rightWristX = 0.0f;
+            g_rightWristZ = 0.0f;
             break;
 
         case VK_ESCAPE:
@@ -718,11 +763,19 @@ bool InitOpenGL(HWND hWnd)
         );
     }
 
+    g_lastTime = GetTickCount();
+    SetTimer(hWnd, 1, 16, nullptr);
+
     return true;
 }
 
 void CleanupOpenGL()
 {
+    if (g_hWnd)
+    {
+        KillTimer(g_hWnd, 1);
+    }
+
     if (g_hRC)
     {
         wglMakeCurrent(nullptr, nullptr);
@@ -786,6 +839,48 @@ void RenderScene()
     SwapBuffers(g_hDC);
 }
 
+void UpdateAnimation()
+{
+    DWORD now = GetTickCount();
+
+    if (g_lastTime == 0)
+    {
+        g_lastTime = now;
+    }
+
+    float deltaTime = (now - g_lastTime) / 1000.0f;
+    g_lastTime = now;
+
+    if (deltaTime > 0.1f)
+    {
+        deltaTime = 0.1f;
+    }
+
+    g_animTime += deltaTime;
+
+    if (g_armAnimation)
+    {
+        g_leftShoulderX = 25.0f * sinf(g_animTime * 1.4f);
+        g_leftShoulderY = 15.0f * sinf(g_animTime * 0.9f);
+        g_leftShoulderZ = -20.0f + 15.0f * sinf(g_animTime * 1.1f);
+
+        g_leftElbowY = 45.0f + 30.0f * sinf(g_animTime * 1.8f);
+
+        g_leftWristX = 20.0f * sinf(g_animTime * 2.1f);
+        g_leftWristZ = 25.0f * cosf(g_animTime * 1.7f);
+
+
+        g_rightShoulderX = -25.0f * sinf(g_animTime * 1.2f);
+        g_rightShoulderY = 15.0f * cosf(g_animTime * 0.8f);
+        g_rightShoulderZ = 20.0f + 15.0f * cosf(g_animTime * 1.0f);
+
+        g_rightElbowY = 45.0f + 30.0f * cosf(g_animTime * 1.6f);
+
+        g_rightWristX = -20.0f * cosf(g_animTime * 2.0f);
+        g_rightWristZ = 25.0f * sinf(g_animTime * 1.5f);
+    }
+}
+
 void DrawAxes()
 {
     glLineWidth(3.0f);
@@ -829,44 +924,62 @@ void DrawObjModel(const ObjModel& model)
 
 void DrawRobot()
 {
-
+    // Корпус робота — серый
     glColor3f(0.75f, 0.78f, 0.82f);
     DrawObjModel(g_body);
 
+    // Левая рука — светло-голубая
     glPushMatrix();
+
+    glColor3f(0.45f, 0.75f, 1.0f);
 
     glTranslatef(0.0f, -0.98f, 3.35f);
 
-    glColor3f(0.55f, 0.65f, 0.95f);
+    glRotatef(g_leftShoulderX, 1.0f, 0.0f, 0.0f);
+    glRotatef(g_leftShoulderY, 0.0f, 1.0f, 0.0f);
+    glRotatef(g_leftShoulderZ, 0.0f, 0.0f, 1.0f);
+
     DrawObjModel(g_leftUpperArm);
 
     glTranslatef(0.0f, 0.0f, -1.30f);
 
-    glColor3f(0.45f, 0.55f, 0.85f);
+    glRotatef(g_leftElbowY, 0.0f, 1.0f, 0.0f);
+
     DrawObjModel(g_leftForearm);
 
     glTranslatef(0.0f, 0.0f, -1.10f);
 
-    glColor3f(0.85f, 0.85f, 0.95f);
+    glRotatef(g_leftWristX, 1.0f, 0.0f, 0.0f);
+    glRotatef(g_leftWristZ, 0.0f, 0.0f, 1.0f);
+
     DrawObjModel(g_leftHand);
 
     glPopMatrix();
 
+    // Правая рука — пастельно-оранжевая
     glPushMatrix();
+
+    glColor3f(1.0f, 0.62f, 0.35f);
 
     glTranslatef(0.0f, 0.98f, 3.35f);
 
-    glColor3f(0.95f, 0.60f, 0.50f);
+    glRotatef(g_rightShoulderX, 1.0f, 0.0f, 0.0f);
+    glRotatef(g_rightShoulderY, 0.0f, 1.0f, 0.0f);
+    glRotatef(g_rightShoulderZ, 0.0f, 0.0f, 1.0f);
+
     DrawObjModel(g_rightUpperArm);
 
     glTranslatef(0.0f, 0.0f, -1.30f);
 
-    glColor3f(0.85f, 0.50f, 0.40f);
+    glRotatef(g_rightElbowY, 0.0f, 1.0f, 0.0f);
+
     DrawObjModel(g_rightForearm);
 
     glTranslatef(0.0f, 0.0f, -1.10f);
 
-    glColor3f(0.95f, 0.85f, 0.80f);
+    glRotatef(g_rightWristX, 1.0f, 0.0f, 0.0f);
+    glRotatef(g_rightWristZ, 0.0f, 0.0f, 1.0f);
+
     DrawObjModel(g_rightHand);
 
     glPopMatrix();
