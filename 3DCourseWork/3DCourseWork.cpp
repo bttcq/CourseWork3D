@@ -48,6 +48,10 @@ bool g_autoRotate = false;
 float g_animTime = 0.0f;
 DWORD g_lastTime = 0;
 
+float g_fps = 0.0f;
+int g_frameCount = 0;
+DWORD g_lastFpsTime = 0;
+
 float g_leftShoulderX = 0.0f;
 float g_leftShoulderY = 0.0f;
 float g_leftShoulderZ = 0.0f;
@@ -86,6 +90,8 @@ void DrawAxes();
 void UpdateAnimation();
 void InitLighting();
 void SetupLight();
+
+void UpdateFPS();
 
 bool InitFont();
 void CleanupFont();
@@ -813,6 +819,8 @@ bool InitOpenGL(HWND hWnd)
     }
 
     g_lastTime = GetTickCount();
+    g_lastFpsTime = g_lastTime;
+
     SetTimer(hWnd, 1, 16, nullptr);
 
     return true;
@@ -969,6 +977,7 @@ void RenderScene()
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+    UpdateFPS();
     DrawInfoText();
 
     SwapBuffers(g_hDC);
@@ -1023,6 +1032,28 @@ void UpdateAnimation()
 
         g_rightWristX = -20.0f * cosf(g_animTime * 2.0f);
         g_rightWristZ = 25.0f * sinf(g_animTime * 1.5f);
+    }
+}
+
+void UpdateFPS()
+{
+    DWORD now = GetTickCount();
+
+    if (g_lastFpsTime == 0)
+    {
+        g_lastFpsTime = now;
+    }
+
+    g_frameCount++;
+
+    DWORD elapsed = now - g_lastFpsTime;
+
+    if (elapsed >= 1000)
+    {
+        g_fps = g_frameCount * 1000.0f / elapsed;
+
+        g_frameCount = 0;
+        g_lastFpsTime = now;
     }
 }
 
@@ -1119,6 +1150,11 @@ void DrawInfoText()
     text.str("");
     text << "Auto rotate: " << (g_autoRotate ? "ON" : "OFF");
     DrawText2D(15.0f, g_height - 125.0f, text.str());
+
+    text.str("");
+    text.clear();
+    text << "FPS: " << g_fps;
+    DrawText2D(15.0f, g_height - 145.0f, text.str());
 
     DrawText2D(15.0f, 65.0f, "X/Y/Z - rotate object");
     DrawText2D(15.0f, 45.0f, "W - wireframe/solid | A - auto rotate | M - arm animation");
