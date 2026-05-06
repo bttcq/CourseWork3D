@@ -41,6 +41,8 @@ int g_lastMouseX = 0;
 int g_lastMouseY = 0;
 
 bool g_armAnimation = false;
+bool g_wireframe  = false;
+bool g_autoRotate = false;
 
 float g_animTime = 0.0f;
 DWORD g_lastTime = 0;
@@ -545,6 +547,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             g_rotateZ += 5.0f;
             break;
 
+        case 'W':
+            g_wireframe = !g_wireframe;
+            break;
+
+        case 'A':
+            g_autoRotate = !g_autoRotate;
+            break;
+
         case 'M':
             g_armAnimation = !g_armAnimation;
             break;
@@ -863,6 +873,8 @@ void RenderScene()
 
     SetupLight();
 
+    glPolygonMode(GL_FRONT_AND_BACK, g_wireframe ? GL_LINE : GL_FILL);
+
     glRotatef(g_rotateX, 1.0f, 0.0f, 0.0f);
     glRotatef(g_rotateY, 0.0f, 1.0f, 0.0f);
     glRotatef(g_rotateZ, 0.0f, 0.0f, 1.0f);
@@ -870,6 +882,8 @@ void RenderScene()
     DrawAxes();
 
     DrawRobot();
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     SwapBuffers(g_hDC);
 }
@@ -892,6 +906,16 @@ void UpdateAnimation()
     }
 
     g_animTime += deltaTime;
+
+    if (g_autoRotate)
+    {
+        g_rotateZ += 20.0f * deltaTime;
+
+        if (g_rotateZ > 360.0f)
+        {
+            g_rotateZ -= 360.0f;
+        }
+    }
 
     if (g_armAnimation)
     {
