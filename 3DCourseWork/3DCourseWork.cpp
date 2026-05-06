@@ -12,6 +12,7 @@
 #include <fstream>
 #include <sstream>
 #include <cstdlib>
+#include <iomanip>
 
 #pragma comment(lib, "opengl32.lib")
 #pragma comment(lib, "glu32.lib")
@@ -61,6 +62,10 @@ float g_rightElbowY = 0.0f;
 float g_rightWristX = 0.0f;
 float g_rightWristZ = 0.0f;
 
+GLuint g_fontBase = 0;
+HFONT g_hFont = nullptr;
+
+
 
 
 
@@ -79,6 +84,11 @@ void DrawAxes();
 void UpdateAnimation();
 void InitLighting();
 void SetupLight();
+
+bool InitFont();
+void CleanupFont();
+void DrawText2D(float x, float y, const std::string& text);
+void DrawInfoText();
 
 static bool FileExistsA(const std::string& path);
 static std::string GetCurrentDirectoryStringA();
@@ -578,6 +588,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             g_rightElbowY = 0.0f;
             g_rightWristX = 0.0f;
             g_rightWristZ = 0.0f;
+            g_wireframe = false;
             break;
 
         case VK_ESCAPE:
@@ -755,6 +766,8 @@ bool InitOpenGL(HWND hWnd)
     glClearColor(0.05f, 0.05f, 0.08f, 1.0f);
 
     ResizeOpenGL(g_width, g_height);
+
+    InitFont();
     
     bool modelsLoaded = true;
 
@@ -785,6 +798,8 @@ bool InitOpenGL(HWND hWnd)
 
 void CleanupOpenGL()
 {
+    CleanupFont();
+
     if (g_hWnd)
     {
         KillTimer(g_hWnd, 1);
@@ -803,6 +818,22 @@ void CleanupOpenGL()
         g_hDC = nullptr;
     }
 }
+
+void CleanupFont()
+{
+    if (g_fontBase != 0)
+    {
+        glDeleteLists(g_fontBase, 96);
+        g_fontBase = 0;
+    }
+
+    if (g_hFont)
+    {
+        DeleteObject(g_hFont);
+        g_hFont = nullptr;
+    }
+}
+
 
 void ResizeOpenGL(int width, int height)
 {
@@ -853,6 +884,37 @@ void InitLighting()
     glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 32.0f);
 }
 
+bool InitFont()
+{
+    g_fontBase = glGenLists(96);
+
+    g_hFont = CreateFontA(
+        -16,
+        0,
+        0,
+        0,
+        FW_NORMAL,
+        FALSE,
+        FALSE,
+        FALSE,
+        ANSI_CHARSET,
+        OUT_TT_PRECIS,
+        CLIP_DEFAULT_PRECIS,
+        ANTIALIASED_QUALITY,
+        FF_DONTCARE | DEFAULT_PITCH,
+        "Consolas"
+    );
+
+    if (!g_hFont)
+    {
+        return false;
+    }
+
+    SelectObject(g_hDC, g_hFont);
+
+    return wglUseFontBitmapsA(g_hDC, 32, 96, g_fontBase) == TRUE;
+}
+
 void SetupLight()
 {
     GLfloat lightPosition[] = { 4.0f, -5.0f, 7.0f, 1.0f };
@@ -884,6 +946,8 @@ void RenderScene()
     DrawRobot();
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+    DrawInfoText();
 
     SwapBuffers(g_hDC);
 }
@@ -965,6 +1029,78 @@ void DrawAxes()
     glLineWidth(1.0f);
 
     glEnable(GL_LIGHTING);
+}
+
+void DrawText2D(float x, float y, const std::string& text)
+{
+    if (g_fontBase == 0)
+    {
+        return;
+    }
+
+    glDisable(GL_LIGHTING);
+    glDisable(GL_DEPTH_TEST);
+
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+
+    gluOrtho2D(0, g_width, 0, g_height);
+
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glRasterPos2f(x, y);
+
+    glListBase(g_fontBase - 32);
+    glCallLists((GLsizei)text.length(), GL_UNSIGNED_BYTE, text.c_str());
+
+    glPopMatrix();
+
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+
+    glMatrixMode(GL_MODELVIEW);
+
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_LIGHTING);
+}
+
+void DrawInfoText()
+{
+    std::ostringstream text;
+
+    text << std::fixed << std::setprecision(1);
+
+    text.str("");
+    text << "Rotation X: " << g_rotateX;
+    DrawText2D(15.0f, g_height - 25.0f, text.str());
+
+    text.str("");
+    text << "Rotation Y: " << g_rotateY;
+    DrawText2D(15.0f, g_height - 45.0f, text.str());
+
+    text.str("");
+    text << "Rotation Z: " << g_rotateZ;
+    DrawText2D(15.0f, g_height - 65.0f, text.str());
+
+    text.str("");
+    text << "Distance: " << g_distance;
+    DrawText2D(15.0f, g_height - 85.0f, text.str());
+
+    text.str("");
+    text << "Mode: " << (g_wireframe ? "Wireframe" : "Solid");
+    DrawText2D(15.0f, g_height - 105.0f, text.str());
+
+    text.str("");
+    text << "Auto rotate: " << (g_autoRotate ? "ON" : "OFF");
+    DrawText2D(15.0f, g_height - 125.0f, text.str());
+
+    DrawText2D(15.0f, 65.0f, "X/Y/Z - rotate object");
+    DrawText2D(15.0f, 45.0f, "W - wireframe/solid | A - auto rotate | M - arm animation");
+    DrawText2D(15.0f, 25.0f, "Mouse drag - rotate scene | Wheel - zoom | R - reset");
 }
 
 void DrawObjModel(const ObjModel& model)
