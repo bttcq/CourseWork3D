@@ -65,6 +65,8 @@ float g_rightWristZ = 0.0f;
 GLuint g_fontBase = 0;
 HFONT g_hFont = nullptr;
 
+int g_screenshotIndex = 1;
+
 
 
 
@@ -89,6 +91,8 @@ bool InitFont();
 void CleanupFont();
 void DrawText2D(float x, float y, const std::string& text);
 void DrawInfoText();
+
+bool SaveScreenshot(const std::string& fileName);
 
 static bool FileExistsA(const std::string& path);
 static std::string GetCurrentDirectoryStringA();
@@ -590,6 +594,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             g_rightWristZ = 0.0f;
             g_wireframe = false;
             break;
+
+        case 'S':
+        {
+            std::ostringstream fileName;
+            fileName << "screenshot_" << g_screenshotIndex << ".bmp";
+
+            if (SaveScreenshot(fileName.str()))
+            {
+                ++g_screenshotIndex;
+                MessageBoxA(g_hWnd, "Screenshot saved", "Info", MB_OK | MB_ICONINFORMATION);
+            }
+            else
+            {
+                MessageBoxA(g_hWnd, "Failed to save screenshot", "Error", MB_OK | MB_ICONERROR);
+            }
+
+            break;
+        }
 
         case VK_ESCAPE:
             DestroyWindow(hWnd);
@@ -1100,7 +1122,88 @@ void DrawInfoText()
 
     DrawText2D(15.0f, 65.0f, "X/Y/Z - rotate object");
     DrawText2D(15.0f, 45.0f, "W - wireframe/solid | A - auto rotate | M - arm animation");
-    DrawText2D(15.0f, 25.0f, "Mouse drag - rotate scene | Wheel - zoom | R - reset");
+    DrawText2D(15.0f, 25.0f, "Mouse drag - rotate scene | Wheel - zoom | R - reset | S - screenshot");
+}
+
+bool SaveScreenshot(const std::string& fileName)
+{
+    int width = g_width;
+    int height = g_height;
+
+    if (width <= 0 || height <= 0)
+    {
+        return false;
+    }
+
+    std::vector<unsigned char> pixels(width * height * 3);
+
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glReadPixels(
+        0,
+        0,
+        width,
+        height,
+        GL_RGB,
+        GL_UNSIGNED_BYTE,
+        pixels.data()
+    );
+
+    int rowSize = width * 3;
+    int paddingSize = (4 - (rowSize % 4)) % 4;
+    int rowSizeWithPadding = rowSize + paddingSize;
+
+    int imageSize = rowSizeWithPadding * height;
+    int fileSize = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + imageSize;
+
+    BITMAPFILEHEADER fileHeader{};
+    fileHeader.bfType = 0x4D42;
+    fileHeader.bfSize = fileSize;
+    fileHeader.bfOffBits = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
+
+    BITMAPINFOHEADER infoHeader{};
+    infoHeader.biSize = sizeof(BITMAPINFOHEADER);
+    infoHeader.biWidth = width;
+    infoHeader.biHeight = height;
+    infoHeader.biPlanes = 1;
+    infoHeader.biBitCount = 24;
+    infoHeader.biCompression = BI_RGB;
+    infoHeader.biSizeImage = imageSize;
+
+    std::ofstream file(fileName, std::ios::binary);
+
+    if (!file.is_open())
+    {
+        return false;
+    }
+
+    file.write(reinterpret_cast<const char*>(&fileHeader), sizeof(fileHeader));
+    file.write(reinterpret_cast<const char*>(&infoHeader), sizeof(infoHeader));
+
+    std::vector<unsigned char> padding(paddingSize, 0);
+
+    for (int y = 0; y < height; ++y)
+    {
+        for (int x = 0; x < width; ++x)
+        {
+            int index = (y * width + x) * 3;
+
+            unsigned char r = pixels[index + 0];
+            unsigned char g = pixels[index + 1];
+            unsigned char b = pixels[index + 2];
+
+            file.put(b);
+            file.put(g);
+            file.put(r);
+        }
+
+        if (paddingSize > 0)
+        {
+            file.write(reinterpret_cast<const char*>(padding.data()), paddingSize);
+        }
+    }
+
+    file.close();
+    return true;
 }
 
 void DrawObjModel(const ObjModel& model)
